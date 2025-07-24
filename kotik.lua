@@ -1,5 +1,5 @@
 -- ВСТАВЬ СЮДА СВОЮ ССЫЛКУ НА ЭТОТ ЖЕ ФАЙЛ В РЕПОЗИТОРИИ ДЛЯ АВТОИНЖЕКТА:
-getgenv().StretchMenuURL = "https://raw.githubusercontent.com/ТВОЙ_РЕПО/ПУТЬ/StretchMenu.lua"
+getgenv().StretchMenuURL = "https://raw.githubusercontent.com/zxczxczxcvdD/kotiki/main/kotik.lua"
 
 -- ДАЛЬШЕ ИДЁТ ВЕСЬ КОД МЕНЮ (НЕ МЕНЯЙ ЭТУ СТРОКУ В ДРУГИХ МЕСТАХ)
 
