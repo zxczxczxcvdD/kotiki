@@ -103,6 +103,13 @@ local Window = ImGui:Window({
     NoClose = true,
 })
 
+-- Восстанавливаем видимость меню при запуске
+if getgenv().StretchMenuVisible == false then
+    Window:SetVisible(false)
+else
+    Window:SetVisible(true)
+end
+
 local sliderValueLabel = Window:Label({
     Text = string.format("Текущее: %.2f", getgenv().Resolution),
     TextColor3 = Color3.fromRGB(200, 200, 255),
@@ -214,8 +221,14 @@ local autoLoadCheckbox = Window:Checkbox({
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.K then
         Window:SetVisible(not Window.Visible)
+        getgenv().StretchMenuVisible = Window.Visible
     end
 end)
+
+-- Сохраняем состояние видимости при любом изменении
+Window.OnVisibleChanged = function(visible)
+    getgenv().StretchMenuVisible = visible
+end
 
 -- СТАРЫЙ РАСТЯГ: применяем на каждый кадр
 RunService.RenderStepped:Connect(function()
