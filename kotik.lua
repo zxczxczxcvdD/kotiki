@@ -122,6 +122,15 @@ local slider = Window:SliderProgress({
 
 Window:Separator({Text = "Конфиги"})
 
+local newConfigName = ""
+local nameInput = Window:InputText({
+    Label = "Имя нового конфига",
+    Value = "",
+    Callback = function(self, Value)
+        newConfigName = tostring(Value)
+    end,
+})
+
 local configList = getConfigList()
 local selectedConfig = autoConfigName or configList[1] or ""
 local configDropdown = Window:Combo({
@@ -137,11 +146,13 @@ Window:Button({
     Text = "Сохранить как...",
     Size = UDim2.new(0.45, 0, 0, 22),
     Callback = function()
-        local name = tostring(selectedConfig)
+        local name = tostring(newConfigName)
         if #name > 0 then
             saveConfig(name, getgenv().Resolution)
             configList = getConfigList()
             configDropdown:SetItems(configList)
+            selectedConfig = name
+            configDropdown:SetSelected(name)
         end
     end,
 })
