@@ -15,26 +15,75 @@ local Camera = workspace.CurrentCamera
 local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
-local CONFIG_PATH = "StretchMenuConfig.json"
+local CONFIG_DIR = "StretchConfigs"
+local AUTOCONFIG_PATH = CONFIG_DIR.."/autoconfig.txt"
+if not isfolder(CONFIG_DIR) then makefolder(CONFIG_DIR) end
 
--- Автозагрузка Resolution из файла
-local function loadConfig()
-    if isfile(CONFIG_PATH) then
-        local data = readfile(CONFIG_PATH)
+-- Получить список конфигов
+local function getConfigList()
+    local files = listfiles(CONFIG_DIR)
+    local configs = {}
+    for _, file in ipairs(files) do
+        if file:sub(-5) == ".json" then
+            table.insert(configs, file:match("([^/\\]+)%.json$"))
+        end
+    end
+    table.sort(configs)
+    return configs
+end
+
+-- Сохранить Resolution в конфиг
+local function saveConfig(name, value)
+    local data = HttpService:JSONEncode({Resolution = value})
+    writefile(CONFIG_DIR.."/"..name..".json", data)
+end
+
+-- Загрузить Resolution из конфига
+local function loadConfig(name)
+    local path = CONFIG_DIR.."/"..name..".json"
+    if isfile(path) then
+        local data = readfile(path)
         local ok, decoded = pcall(function() return HttpService:JSONDecode(data) end)
         if ok and decoded and decoded.Resolution then
             return tonumber(decoded.Resolution)
         end
     end
-    return 0.6
+    return nil
 end
-getgenv().Resolution = loadConfig()
 
--- Автосохранение Resolution раз в 10 секунд
+-- Сохранить имя автозагружаемого конфига
+local function setAutoConfig(name)
+    writefile(AUTOCONFIG_PATH, name)
+end
+
+-- Получить имя автозагружаемого конфига
+local function getAutoConfig()
+    if isfile(AUTOCONFIG_PATH) then
+        return readfile(AUTOCONFIG_PATH)
+    end
+    return nil
+end
+
+-- Автозагрузка Resolution из автоконфига или дефолт 0.75
+local autoConfigName = getAutoConfig()
+if autoConfigName then
+    local val = loadConfig(autoConfigName)
+    if val then
+        getgenv().Resolution = val
+    else
+        getgenv().Resolution = 0.75
+    end
+else
+    getgenv().Resolution = 0.75
+end
+
+-- Автосохранение Resolution раз в 10 секунд (в автоконфиг, если выбран)
 spawn(function()
     while true do
-        local data = HttpService:JSONEncode({Resolution = getgenv().Resolution})
-        writefile(CONFIG_PATH, data)
+        local name = getAutoConfig()
+        if name then
+            saveConfig(name, getgenv().Resolution)
+        end
         wait(10)
     end
 end)
@@ -49,8 +98,8 @@ ImGui:Init({
 -- Меню
 local Window = ImGui:Window({
     Title = "Растяг камеры",
-    Size = UDim2.fromOffset(320, 100),
-    Position = UDim2.new(0.5, -160, 0.5, -50),
+    Size = UDim2.fromOffset(340, 140),
+    Position = UDim2.new(0.5, -170, 0.5, -70),
     NoClose = true,
 })
 
@@ -68,6 +117,72 @@ local slider = Window:SliderProgress({
     Callback = function(self, Value)
         getgenv().Resolution = tonumber(string.format("%.2f", Value))
         sliderValueLabel.Text = string.format("Текущее: %.2f", getgenv().Resolution)
+    end,
+})
+
+Window:Separator({Text = "Конфиги"})
+
+local configList = getConfigList()
+local selectedConfig = autoConfigName or configList[1] or ""
+local configDropdown = Window:Combo({
+    Label = "Выбрать конфиг",
+    Items = configList,
+    Selected = selectedConfig,
+    Callback = function(self, Value)
+        selectedConfig = Value
+    end,
+})
+
+Window:Button({
+    Text = "Сохранить как...",
+    Size = UDim2.new(0.45, 0, 0, 22),
+    Callback = function()
+        local name = tostring(selectedConfig)
+        if #name > 0 then
+            saveConfig(name, getgenv().Resolution)
+            configList = getConfigList()
+            configDropdown:SetItems(configList)
+        end
+    end,
+})
+
+Window:Button({
+    Text = "Загрузить",
+    Size = UDim2.new(0.45, 0, 0, 22),
+    Callback = function()
+        local val = loadConfig(selectedConfig)
+        if val then
+            getgenv().Resolution = val
+            slider:SetValue(val)
+            sliderValueLabel.Text = string.format("Текущее: %.2f", val)
+        end
+    end,
+})
+
+Window:Button({
+    Text = "Удалить",
+    Size = UDim2.new(0.45, 0, 0, 22),
+    Callback = function()
+        local path = CONFIG_DIR.."/"..selectedConfig..".json"
+        if isfile(path) then
+            delfile(path)
+            configList = getConfigList()
+            configDropdown:SetItems(configList)
+            selectedConfig = configList[1] or ""
+            configDropdown:SetSelected(selectedConfig)
+        end
+    end,
+})
+
+local autoLoadCheckbox = Window:Checkbox({
+    Label = "Автозагрузка этого конфига",
+    Value = (selectedConfig == autoConfigName),
+    Callback = function(self, Value)
+        if Value and selectedConfig and #selectedConfig > 0 then
+            setAutoConfig(selectedConfig)
+        elseif not Value then
+            if isfile(AUTOCONFIG_PATH) then delfile(AUTOCONFIG_PATH) end
+        end
     end,
 })
 
