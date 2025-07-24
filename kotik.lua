@@ -262,73 +262,120 @@ getgenv().ESP_Names = getgenv().ESP_Names or true
 getgenv().ESP_EnemiesOnly = getgenv().ESP_EnemiesOnly or false
 getgenv().ESP_MaxDistance = getgenv().ESP_MaxDistance or 1000
 
-local espCheckbox = Window:Checkbox({
-    Label = "Включить ESP",
-    Value = getgenv().ESP_Enabled,
-    Callback = function(self, Value)
-        getgenv().ESP_Enabled = Value
-    end,
-})
-local skeletonCheckbox = Window:Checkbox({
-    Label = "Skeleton ESP",
-    Value = getgenv().ESP_Skeleton,
-    Callback = function(self, Value)
-        getgenv().ESP_Skeleton = Value
-    end,
-})
-local nametagsCheckbox = Window:Checkbox({
-    Label = "NameTags сквозь стены",
-    Value = getgenv().ESP_NameTagsThroughWalls,
-    Callback = function(self, Value)
-        getgenv().ESP_NameTagsThroughWalls = Value
-    end,
-})
-local colorPicker = Window:ColorPicker({
-    Label = "Цвет ESP",
-    Color = getgenv().ESP_Color,
-    Callback = function(self, Color)
-        getgenv().ESP_Color = Color
-    end,
-})
-local thicknessSlider = Window:SliderProgress({
-    Label = "Толщина линий",
-    Value = getgenv().ESP_Thickness,
-    Minimum = 1,
-    Maximum = 8,
-    Callback = function(self, Value)
-        getgenv().ESP_Thickness = math.floor(Value)
-    end,
-})
-local boxesCheckbox = Window:Checkbox({
-    Label = "Показывать боксы",
-    Value = getgenv().ESP_Boxes,
-    Callback = function(self, Value)
-        getgenv().ESP_Boxes = Value
-    end,
-})
-local namesCheckbox = Window:Checkbox({
-    Label = "Показывать имена",
-    Value = getgenv().ESP_Names,
-    Callback = function(self, Value)
-        getgenv().ESP_Names = Value
-    end,
-})
-local enemiesCheckbox = Window:Checkbox({
-    Label = "Только враги",
-    Value = getgenv().ESP_EnemiesOnly,
-    Callback = function(self, Value)
-        getgenv().ESP_EnemiesOnly = Value
-    end,
-})
-local distanceSlider = Window:SliderProgress({
-    Label = "Макс. дистанция",
-    Value = getgenv().ESP_MaxDistance,
-    Minimum = 100,
-    Maximum = 5000,
-    Callback = function(self, Value)
-        getgenv().ESP_MaxDistance = math.floor(Value)
-    end,
-})
+-- ESP SETTINGS TABLE
+getgenv().ESP_Settings = getgenv().ESP_Settings or {
+    NameSize = 14,
+    NameColor = Color3.fromRGB(0,255,0),
+    NameTransparency = 0,
+    OutlineColor = Color3.fromRGB(0,0,0),
+    HighlightColor = Color3.fromRGB(255,0,0),
+    HighlightTransparency = 0.5,
+    NameOffset = 2
+}
+
+-- Синхронизация настроек из меню
+local function SyncESPSettings()
+    getgenv().ESP_Settings.NameColor = getgenv().ESP_Color
+    getgenv().ESP_Settings.NameSize = getgenv().ESP_Settings.NameSize or 14
+    getgenv().ESP_Settings.NameTransparency = 0
+    getgenv().ESP_Settings.OutlineColor = Color3.fromRGB(0,0,0)
+    getgenv().ESP_Settings.HighlightColor = getgenv().ESP_Color
+    getgenv().ESP_Settings.HighlightTransparency = 0.5
+    getgenv().ESP_Settings.NameOffset = 2
+end
+
+-- Создание ESP для игрока
+local function CreateESP(plr)
+    if plr == player or not plr.Character then return end
+    local character = plr.Character
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not rootPart then return end
+    if character:FindFirstChild("ESP") then return end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "ESP"
+    billboard.Size = UDim2.new(0, 100, 0, 20)
+    billboard.StudsOffset = Vector3.new(0, getgenv().ESP_Settings.NameOffset, 0)
+    billboard.AlwaysOnTop = getgenv().ESP_NameTagsThroughWalls
+    billboard.Adornee = rootPart
+    billboard.Parent = character
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 1, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = plr.Name
+    nameLabel.TextColor3 = getgenv().ESP_Settings.NameColor
+    nameLabel.TextTransparency = getgenv().ESP_Settings.NameTransparency
+    nameLabel.TextStrokeColor3 = getgenv().ESP_Settings.OutlineColor
+    nameLabel.TextStrokeTransparency = 0
+    nameLabel.TextSize = getgenv().ESP_Settings.NameSize
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.Parent = billboard
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ESPHighlight"
+    highlight.FillColor = getgenv().ESP_Settings.HighlightColor
+    highlight.FillTransparency = getgenv().ESP_Settings.HighlightTransparency
+    highlight.OutlineColor = getgenv().ESP_Settings.OutlineColor
+    highlight.Adornee = character
+    highlight.Parent = character
+end
+
+-- Удаление ESP с игрока
+local function RemoveESP(plr)
+    if plr.Character then
+        local esp = plr.Character:FindFirstChild("ESP")
+        local highlight = plr.Character:FindFirstChild("ESPHighlight")
+        if esp then esp:Destroy() end
+        if highlight then highlight:Destroy() end
+    end
+end
+
+-- Обновление ESP для всех игроков
+local function UpdateESP()
+    SyncESPSettings()
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if getgenv().ESP_Enabled then
+            if plr ~= player and plr.Character and not plr.Character:FindFirstChild("ESP") then
+                CreateESP(plr)
+            end
+        else
+            RemoveESP(plr)
+        end
+    end
+end
+
+-- Обновлять ESP при изменении чекбокса
+espCheckbox.Callback = function(self, Value)
+    getgenv().ESP_Enabled = Value
+    UpdateESP()
+end
+nametagsCheckbox.Callback = function(self, Value)
+    getgenv().ESP_NameTagsThroughWalls = Value
+    UpdateESP()
+end
+colorPicker.Callback = function(self, Color)
+    getgenv().ESP_Color = Color
+    UpdateESP()
+end
+
+-- Следить за появлением новых персонажей
+Players.PlayerAdded:Connect(function(plr)
+    plr.CharacterAdded:Connect(function()
+        if getgenv().ESP_Enabled then
+            wait(1)
+            CreateESP(plr)
+        end
+    end)
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    RemoveESP(plr)
+end)
+
+-- При старте — обновить ESP для всех
+UpdateESP()
 
 -- ESP отрисовка
 local function IsEnemy(target)
