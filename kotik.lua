@@ -247,4 +247,128 @@ spawn(function()
             break
         end
     end
+end)
+
+Window:Separator({Text = "ESP"})
+
+-- ESP настройки (getgenv)
+getgenv().ESP_Enabled = getgenv().ESP_Enabled or false
+getgenv().ESP_Skeleton = getgenv().ESP_Skeleton or false
+getgenv().ESP_NameTagsThroughWalls = getgenv().ESP_NameTagsThroughWalls or false
+getgenv().ESP_Color = getgenv().ESP_Color or Color3.fromRGB(0,255,0)
+getgenv().ESP_Thickness = getgenv().ESP_Thickness or 2
+getgenv().ESP_Boxes = getgenv().ESP_Boxes or true
+getgenv().ESP_Names = getgenv().ESP_Names or true
+getgenv().ESP_EnemiesOnly = getgenv().ESP_EnemiesOnly or false
+getgenv().ESP_MaxDistance = getgenv().ESP_MaxDistance or 1000
+
+local espCheckbox = Window:Checkbox({
+    Label = "Включить ESP",
+    Value = getgenv().ESP_Enabled,
+    Callback = function(self, Value)
+        getgenv().ESP_Enabled = Value
+    end,
+})
+local skeletonCheckbox = Window:Checkbox({
+    Label = "Skeleton ESP",
+    Value = getgenv().ESP_Skeleton,
+    Callback = function(self, Value)
+        getgenv().ESP_Skeleton = Value
+    end,
+})
+local nametagsCheckbox = Window:Checkbox({
+    Label = "NameTags сквозь стены",
+    Value = getgenv().ESP_NameTagsThroughWalls,
+    Callback = function(self, Value)
+        getgenv().ESP_NameTagsThroughWalls = Value
+    end,
+})
+local colorPicker = Window:ColorPicker({
+    Label = "Цвет ESP",
+    Color = getgenv().ESP_Color,
+    Callback = function(self, Color)
+        getgenv().ESP_Color = Color
+    end,
+})
+local thicknessSlider = Window:SliderProgress({
+    Label = "Толщина линий",
+    Value = getgenv().ESP_Thickness,
+    Minimum = 1,
+    Maximum = 8,
+    Callback = function(self, Value)
+        getgenv().ESP_Thickness = math.floor(Value)
+    end,
+})
+local boxesCheckbox = Window:Checkbox({
+    Label = "Показывать боксы",
+    Value = getgenv().ESP_Boxes,
+    Callback = function(self, Value)
+        getgenv().ESP_Boxes = Value
+    end,
+})
+local namesCheckbox = Window:Checkbox({
+    Label = "Показывать имена",
+    Value = getgenv().ESP_Names,
+    Callback = function(self, Value)
+        getgenv().ESP_Names = Value
+    end,
+})
+local enemiesCheckbox = Window:Checkbox({
+    Label = "Только враги",
+    Value = getgenv().ESP_EnemiesOnly,
+    Callback = function(self, Value)
+        getgenv().ESP_EnemiesOnly = Value
+    end,
+})
+local distanceSlider = Window:SliderProgress({
+    Label = "Макс. дистанция",
+    Value = getgenv().ESP_MaxDistance,
+    Minimum = 100,
+    Maximum = 5000,
+    Callback = function(self, Value)
+        getgenv().ESP_MaxDistance = math.floor(Value)
+    end,
+})
+
+-- ESP отрисовка
+local function IsEnemy(target)
+    -- Можно доработать под свою игру (например, по командам)
+    return true
+end
+
+local function WorldToScreen(pos)
+    local screen, onScreen = Camera:WorldToViewportPoint(pos)
+    return Vector2.new(screen.X, screen.Y), onScreen, screen.Z
+end
+
+local function DrawESP()
+    if not getgenv().ESP_Enabled then return end
+    for _,plr in ipairs(Players:GetPlayers()) do
+        if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+            if getgenv().ESP_EnemiesOnly and not IsEnemy(plr) then continue end
+            local root = plr.Character.HumanoidRootPart
+            local pos, onScreen, dist = WorldToScreen(root.Position)
+            if not onScreen or dist > getgenv().ESP_MaxDistance then continue end
+            -- Боксы
+            if getgenv().ESP_Boxes then
+                -- Можно использовать Drawing API или Gui (зависит от окружения)
+                -- Здесь только пример:
+                -- Drawing.new("Square") ...
+            end
+            -- Skeleton ESP
+            if getgenv().ESP_Skeleton then
+                -- Перебор костей и отрисовка линий между ними
+                -- Например: Head->Torso->Arms->Legs
+            end
+            -- NameTags
+            if getgenv().ESP_Names then
+                -- Если NameTagsThroughWalls, то всегда рисуем, иначе проверяем видимость
+                -- Drawing.new("Text") ...
+            end
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    pcall(DrawESP)
 end) 
