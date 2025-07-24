@@ -1,9 +1,12 @@
 -- ВСТАВЬ СЮДА СВОЮ ССЫЛКУ НА ЭТОТ ЖЕ ФАЙЛ В РЕПОЗИТОРИИ ДЛЯ АВТОИНЖЕКТА:
-getgenv().StretchMenuURL = "https://raw.githubusercontent.com/zxczxczxcvdD/kotiki/main/kotik.lua"
+getgenv().StretchMenuURL = "https://raw.github.com/zxczxczxcvdD/kotiki/main/kotik.lua"
 
--- ДАЛЬШЕ ИДЁТ ВЕСЬ КОД МЕНЮ (НЕ МЕНЯЙ ЭТУ СТРОКУ В ДРУГИХ МЕСТАХ)
-
--- Минималистичное меню растяга камеры на ReGui, только слайдер, пресеты, автосохранение и автоинжект
+-- Удаляем все старые окна ReGui при запуске
+pcall(function()
+    for _,v in ipairs(game:GetService("CoreGui"):GetChildren()) do
+        if v.Name == "ReGui" then v:Destroy() end
+    end
+end)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -13,13 +16,6 @@ local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
 local CONFIG_PATH = "StretchMenuConfig.json"
-
--- Импорт ReGui
-local ImGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
-local PrefabsId = `rbxassetid://{ImGui.PrefabsId}`
-ImGui:Init({
-    Prefabs = game:GetService("InsertService"):LoadLocalAsset(PrefabsId)
-})
 
 -- Автозагрузка Resolution из файла
 local function loadConfig()
@@ -43,11 +39,18 @@ spawn(function()
     end
 end)
 
--- Мини-меню через ReGui
+-- Импорт ReGui
+local ImGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
+local PrefabsId = `rbxassetid://{ImGui.PrefabsId}`
+ImGui:Init({
+    Prefabs = game:GetService("InsertService"):LoadLocalAsset(PrefabsId)
+})
+
+-- Меню
 local Window = ImGui:Window({
     Title = "Растяг камеры",
-    Size = UDim2.fromOffset(260, 120),
-    Position = UDim2.new(0.5, -130, 0.5, -60),
+    Size = UDim2.fromOffset(320, 100),
+    Position = UDim2.new(0.5, -160, 0.5, -50),
     NoClose = true,
 })
 
@@ -64,42 +67,20 @@ local slider = Window:SliderProgress({
     Maximum = 1.8,
     Callback = function(self, Value)
         getgenv().Resolution = tonumber(string.format("%.2f", Value))
-        sliderValueLabel:SetText(string.format("Текущее: %.2f", getgenv().Resolution))
+        sliderValueLabel.Text = string.format("Текущее: %.2f", getgenv().Resolution)
     end,
 })
 
-Window:Separator({Text = "Пресеты"})
-local presetValues = {}
-for i = 0.2, 1.8, 0.1 do table.insert(presetValues, tonumber(string.format("%.1f", i))) end
-local row = Window:Row()
-for i, v in ipairs(presetValues) do
-    if (i-1) % 5 == 0 and i > 1 then row = Window:Row() end
-    row:Button({
-        Text = tostring(v),
-        Size = UDim2.new(0, 38, 0, 22),
-        Callback = function()
-            getgenv().Resolution = v
-            slider:SetValue(v)
-            sliderValueLabel:SetText(string.format("Текущее: %.2f", v))
-        end,
-    })
-end
-
--- Бинд на K для скрытия/показа меню
+-- Бинд на K для скрытия/показа только нового меню
 UserInputService.InputBegan:Connect(function(input, processed)
     if not processed and input.KeyCode == Enum.KeyCode.K then
         Window:SetVisible(not Window.Visible)
     end
 end)
 
--- Оптимизированное применение растяга камеры
-local baseCFrame = Camera.CFrame
-local lastRes = getgenv().Resolution
+-- СТАРЫЙ РАСТЯГ: применяем на каждый кадр
 RunService.RenderStepped:Connect(function()
-    if getgenv().Resolution ~= lastRes then
-        Camera.CFrame = baseCFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().Resolution, 0, 0, 0, 1)
-        lastRes = getgenv().Resolution
-    end
+    Camera.CFrame = Camera.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, getgenv().Resolution, 0, 0, 0, 1)
 end)
 
 -- Автоинжект при смене placeId
