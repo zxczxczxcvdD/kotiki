@@ -131,6 +131,12 @@ local nameInput = Window:InputText({
     end,
 })
 
+local statusLabel = Window:Label({
+    Text = "",
+    TextColor3 = Color3.fromRGB(255, 100, 100),
+    TextSize = 14,
+})
+
 local configList = getConfigList()
 local selectedConfig = autoConfigName or configList[1] or ""
 local configDropdown = Window:Combo({
@@ -147,13 +153,20 @@ Window:Button({
     Size = UDim2.new(0.45, 0, 0, 22),
     Callback = function()
         local name = tostring(newConfigName)
-        if #name > 0 then
-            saveConfig(name, getgenv().Resolution)
-            configList = getConfigList()
-            configDropdown:SetItems(configList)
-            selectedConfig = name
-            configDropdown:SetSelected(name)
+        if #name == 0 then
+            statusLabel.Text = "Введите имя конфига!"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 100, 100)
+            return
         end
+        saveConfig(name, getgenv().Resolution)
+        configList = getConfigList()
+        configDropdown:SetItems(configList)
+        selectedConfig = name
+        configDropdown:SetSelected(name)
+        statusLabel.Text = "Сохранено: " .. name
+        statusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        nameInput:SetText("")
+        newConfigName = ""
     end,
 })
 
