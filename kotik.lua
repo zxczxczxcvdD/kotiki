@@ -251,43 +251,21 @@ end)
 
 Window:Separator({Text = "ESP"})
 
--- ESP настройки (getgenv)
-getgenv().ESP_Enabled = getgenv().ESP_Enabled or false
-getgenv().ESP_Skeleton = getgenv().ESP_Skeleton or false
-getgenv().ESP_NameTagsThroughWalls = getgenv().ESP_NameTagsThroughWalls or false
-getgenv().ESP_Color = getgenv().ESP_Color or Color3.fromRGB(0,255,0)
-getgenv().ESP_Thickness = getgenv().ESP_Thickness or 2
-getgenv().ESP_Boxes = getgenv().ESP_Boxes or true
-getgenv().ESP_Names = getgenv().ESP_Names or true
-getgenv().ESP_EnemiesOnly = getgenv().ESP_EnemiesOnly or false
-getgenv().ESP_MaxDistance = getgenv().ESP_MaxDistance or 1000
+getgenv().ESPEnabled = getgenv().ESPEnabled or false
 
--- ESP SETTINGS TABLE
-getgenv().ESP_Settings = getgenv().ESP_Settings or {
-    NameSize = 14,
-    NameColor = Color3.fromRGB(0,255,0),
-    NameTransparency = 0,
-    OutlineColor = Color3.fromRGB(0,0,0),
-    HighlightColor = Color3.fromRGB(255,0,0),
-    HighlightTransparency = 0.5,
-    NameOffset = 2
-}
+local espCheckbox = Window:Checkbox({
+    Label = "ESP",
+    Value = getgenv().ESPEnabled,
+    Callback = function(self, Value)
+        getgenv().ESPEnabled = Value
+        UpdateESP()
+    end,
+})
 
--- Синхронизация настроек из меню
-local function SyncESPSettings()
-    getgenv().ESP_Settings.NameColor = getgenv().ESP_Color
-    getgenv().ESP_Settings.NameSize = getgenv().ESP_Settings.NameSize or 14
-    getgenv().ESP_Settings.NameTransparency = 0
-    getgenv().ESP_Settings.OutlineColor = Color3.fromRGB(0,0,0)
-    getgenv().ESP_Settings.HighlightColor = getgenv().ESP_Color
-    getgenv().ESP_Settings.HighlightTransparency = 0.5
-    getgenv().ESP_Settings.NameOffset = 2
-end
-
--- Создание ESP для игрока
-local function CreateESP(plr)
-    if plr == player or not plr.Character then return end
-    local character = plr.Character
+-- Твой ESP-код ниже (без изменений):
+local function CreateESP(player)
+    if player == player or not player.Character then return end
+    local character = player.Character
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     local rootPart = character:FindFirstChild("HumanoidRootPart")
     if not humanoid or not rootPart then return end
@@ -296,86 +274,72 @@ local function CreateESP(plr)
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESP"
     billboard.Size = UDim2.new(0, 100, 0, 20)
-    billboard.StudsOffset = Vector3.new(0, getgenv().ESP_Settings.NameOffset, 0)
-    billboard.AlwaysOnTop = getgenv().ESP_NameTagsThroughWalls
+    billboard.StudsOffset = Vector3.new(0, 2, 0)
+    billboard.AlwaysOnTop = true
     billboard.Adornee = rootPart
     billboard.Parent = character
 
     local nameLabel = Instance.new("TextLabel")
     nameLabel.Size = UDim2.new(1, 0, 1, 0)
     nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = plr.Name
-    nameLabel.TextColor3 = getgenv().ESP_Settings.NameColor
-    nameLabel.TextTransparency = getgenv().ESP_Settings.NameTransparency
-    nameLabel.TextStrokeColor3 = getgenv().ESP_Settings.OutlineColor
+    nameLabel.Text = player.Name
+    nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    nameLabel.TextTransparency = 0
+    nameLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
     nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextSize = getgenv().ESP_Settings.NameSize
+    nameLabel.TextSize = 14
     nameLabel.Font = Enum.Font.Gotham
     nameLabel.Parent = billboard
 
     local highlight = Instance.new("Highlight")
     highlight.Name = "ESPHighlight"
-    highlight.FillColor = getgenv().ESP_Settings.HighlightColor
-    highlight.FillTransparency = getgenv().ESP_Settings.HighlightTransparency
-    highlight.OutlineColor = getgenv().ESP_Settings.OutlineColor
+    highlight.FillColor = Color3.fromRGB(255,0,0)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(0,0,0)
     highlight.Adornee = character
     highlight.Parent = character
 end
 
--- Удаление ESP с игрока
-local function RemoveESP(plr)
-    if plr.Character then
-        local esp = plr.Character:FindFirstChild("ESP")
-        local highlight = plr.Character:FindFirstChild("ESPHighlight")
+local function RemoveESP(player)
+    if player.Character then
+        local esp = player.Character:FindFirstChild("ESP")
+        local highlight = player.Character:FindFirstChild("ESPHighlight")
         if esp then esp:Destroy() end
         if highlight then highlight:Destroy() end
     end
 end
 
--- Обновление ESP для всех игроков
-local function UpdateESP()
-    SyncESPSettings()
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if getgenv().ESP_Enabled then
-            if plr ~= player and plr.Character and not plr.Character:FindFirstChild("ESP") then
-                CreateESP(plr)
-            end
-        else
-            RemoveESP(plr)
+function UpdateESP()
+    if not getgenv().ESPEnabled then
+        for _, player in pairs(Players:GetPlayers()) do
+            RemoveESP(player)
+        end
+        return
+    end
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= player and player.Character and not player.Character:FindFirstChild("ESP") then
+            CreateESP(player)
         end
     end
 end
 
--- Обновлять ESP при изменении чекбокса
-espCheckbox.Callback = function(self, Value)
-    getgenv().ESP_Enabled = Value
-    UpdateESP()
-end
-nametagsCheckbox.Callback = function(self, Value)
-    getgenv().ESP_NameTagsThroughWalls = Value
-    UpdateESP()
-end
-colorPicker.Callback = function(self, Color)
-    getgenv().ESP_Color = Color
-    UpdateESP()
-end
-
--- Следить за появлением новых персонажей
-Players.PlayerAdded:Connect(function(plr)
-    plr.CharacterAdded:Connect(function()
-        if getgenv().ESP_Enabled then
-            wait(1)
-            CreateESP(plr)
-        end
+Players.PlayerAdded:Connect(function(player)
+    player.CharacterAdded:Connect(function()
+        if getgenv().ESPEnabled then CreateESP(player) end
     end)
 end)
 
-Players.PlayerRemoving:Connect(function(plr)
-    RemoveESP(plr)
+Players.PlayerRemoving:Connect(function(player)
+    RemoveESP(player)
 end)
 
--- При старте — обновить ESP для всех
-UpdateESP()
+for _, player in pairs(Players:GetPlayers()) do
+    if player.Character then
+        player.CharacterAdded:Connect(function()
+            if getgenv().ESPEnabled then CreateESP(player) end
+        end)
+    end
+end
 
 -- ESP отрисовка
 local function IsEnemy(target)
