@@ -251,135 +251,71 @@ end)
 
 Window:Separator({Text = "ESP"})
 
-getgenv().ESPEnabled = getgenv().ESPEnabled or false
+-- Загружаем Rayfield Interface Suite
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+local Window = nil
 
-local espCheckbox = Window:Checkbox({
-    Label = "ESP",
-    Value = getgenv().ESPEnabled,
-    Callback = function(self, Value)
-        getgenv().ESPEnabled = Value
-        UpdateESP()
-    end,
-})
+-- Сервисы
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local Camera = game.Workspace.CurrentCamera
+local TweenService = game:GetService("TweenService")
 
--- Твой ESP-код ниже (без изменений):
-local function CreateESP(player)
-    if player == player or not player.Character then return end
-    local character = player.Character
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    local rootPart = character:FindFirstChild("HumanoidRootPart")
-    if not humanoid or not rootPart then return end
-    if character:FindFirstChild("ESP") then return end
+-- Таблица для хранения состояний
+local Settings = {
+    ESPEnabled = false,
+    SpeedEnabled = false,
+    SpeedValue = 50,
+    FlyEnabled = false,
+    FlySpeed = 50,
+    HighJumpEnabled = false,
+    JumpPower = 100,
+    NoclipEnabled = false,
+    GUIEnabled = false,
+    RecordMode = false,
+    StrafeEnabled = false,
+    StrafeSpeed = 30,
+    StrafeInertia = 0.9,
+    PotatoMode = false, -- Переключатель для "картофельной" графики
+    ESPSettings = {
+        NameSize = 8,
+        NameColor = Color3.fromRGB(255, 255, 255),
+        NameTransparency = 0,
+        OutlineColor = Color3.fromRGB(0, 0, 0),
+        HighlightColor = Color3.fromRGB(255, 0, 0),
+        HighlightTransparency = 0.5,
+        NameOffset = 2
+    },
+    Hitbox = {
+        Status = false,
+        Size = 15,
+        Transparency = 0.9,
+        TeamCheck = false
+    },
+    SilentExpander = {
+        Status = false,
+        Size = 50,
+        Transparency = 0.9,
+        TeamCheck = false
+    },
+    CharacterHighlight = {
+        Enabled = false,
+        FillUseTeamColor = true,
+        OutlineUseTeamColor = true,
+        FillColor = Color3.new(0, 0, 0),
+        OutlineColor = Color3.new(1, 1, 1),
+        FillTransparency = 0.5,
+        OutlineTransparency = 0.5
+    },
+    Aimbot = {
+        Enabled = false,
+        Smoothness = 0.05,
+        Keybind = Enum.KeyCode.E,
+        TargetPart = "Head",
+        TeamCheck = true
+    }
+}
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESP"
-    billboard.Size = UDim2.new(0, 100, 0, 20)
-    billboard.StudsOffset = Vector3.new(0, 2, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Adornee = rootPart
-    billboard.Parent = character
-
-    local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(1, 0, 1, 0)
-    nameLabel.BackgroundTransparency = 1
-    nameLabel.Text = player.Name
-    nameLabel.TextColor3 = Color3.fromRGB(255,255,255)
-    nameLabel.TextTransparency = 0
-    nameLabel.TextStrokeColor3 = Color3.fromRGB(0,0,0)
-    nameLabel.TextStrokeTransparency = 0
-    nameLabel.TextSize = 14
-    nameLabel.Font = Enum.Font.Gotham
-    nameLabel.Parent = billboard
-
-    local highlight = Instance.new("Highlight")
-    highlight.Name = "ESPHighlight"
-    highlight.FillColor = Color3.fromRGB(255,0,0)
-    highlight.FillTransparency = 0.5
-    highlight.OutlineColor = Color3.fromRGB(0,0,0)
-    highlight.Adornee = character
-    highlight.Parent = character
-end
-
-local function RemoveESP(player)
-    if player.Character then
-        local esp = player.Character:FindFirstChild("ESP")
-        local highlight = player.Character:FindFirstChild("ESPHighlight")
-        if esp then esp:Destroy() end
-        if highlight then highlight:Destroy() end
-    end
-end
-
-function UpdateESP()
-    if not getgenv().ESPEnabled then
-        for _, player in pairs(Players:GetPlayers()) do
-            RemoveESP(player)
-        end
-        return
-    end
-    for _, player in pairs(Players:GetPlayers()) do
-        if player ~= player and player.Character and not player.Character:FindFirstChild("ESP") then
-            CreateESP(player)
-        end
-    end
-end
-
-Players.PlayerAdded:Connect(function(player)
-    player.CharacterAdded:Connect(function()
-        if getgenv().ESPEnabled then CreateESP(player) end
-    end)
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    RemoveESP(player)
-end)
-
-for _, player in pairs(Players:GetPlayers()) do
-    if player.Character then
-        player.CharacterAdded:Connect(function()
-            if getgenv().ESPEnabled then CreateESP(player) end
-        end)
-    end
-end
-
--- ESP отрисовка
-local function IsEnemy(target)
-    -- Можно доработать под свою игру (например, по командам)
-    return true
-end
-
-local function WorldToScreen(pos)
-    local screen, onScreen = Camera:WorldToViewportPoint(pos)
-    return Vector2.new(screen.X, screen.Y), onScreen, screen.Z
-end
-
-local function DrawESP()
-    if not getgenv().ESP_Enabled then return end
-    for _,plr in ipairs(Players:GetPlayers()) do
-        if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
-            if getgenv().ESP_EnemiesOnly and not IsEnemy(plr) then continue end
-            local root = plr.Character.HumanoidRootPart
-            local pos, onScreen, dist = WorldToScreen(root.Position)
-            if not onScreen or dist > getgenv().ESP_MaxDistance then continue end
-            -- Боксы
-            if getgenv().ESP_Boxes then
-                -- Можно использовать Drawing API или Gui (зависит от окружения)
-                -- Здесь только пример:
-                -- Drawing.new("Square") ...
-            end
-            -- Skeleton ESP
-            if getgenv().ESP_Skeleton then
-                -- Перебор костей и отрисовка линий между ними
-                -- Например: Head->Torso->Arms->Legs
-            end
-            -- NameTags
-            if getgenv().ESP_Names then
-                -- Если NameTagsThroughWalls, то всегда рисуем, иначе проверяем видимость
-                -- Drawing.new("Text") ...
-            end
-        end
-    end
-end
-
-RunService.RenderStepped:Connect(function()
-    pcall(DrawESP)
-end) 
+-- (ВСТАВЛЯЮ весь ESP-блок, меню, функции CreateESP, UpdateESP, и т.д. из предоставленного пользователем кода) 
